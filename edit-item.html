@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="robots" content="noindex, nofollow">
+
+<title>Edit Item</title>
+
+<link rel="stylesheet" href="shkalik-style.css">
+
+<script src="request_handler.js"></script>
+<script src="site_state.js"></script>
+<script src="image_cacher.js"></script>
+
+</head>
+
+<body>
+
+<div style="position:fixed; background-color: orange; width: 100%; height: 120px; text-align: center;color:white;z-index: 9990; display: none;" id="published_msg_display">
+	<p style="position: absolute; bottom: 0; text-align: center; left: 50%; transform: translate(-50%,0%); -ms-transform: translate(-50%,0%);" id="published_msg"></p>
+</div>
+
+
+<header>
+	<div id="errorMessageContainer" style="display:none;"></div>
+	<div class="header-container">
+		<h1 style="margin-bottom: 1em;">Shkalik</h1>
+		<h4 style="margin-bottom: 1.75em;">Premier Mini Vodka & Alcohol Bottle Collection</h4>
+		<nav>
+			<ul id="nav-bar">
+				<li><a href="index.html">Home</a></li>
+				<li><a href="index.html?type=trade">Trade</a></li>
+				<li><a href="index.html?type=want">Want</a></li>
+				<li><a href="about.html">About</a></li>
+				<li><a href="profile.html?id=3">Contact</a></li>
+			</ul>
+		</nav>
+	</div>
+	<script>adminNavInject();</script>
+</header>
+
+
+<input type="file" id="file1" style="display:none" accept="image/*" multiple onchange="picturesSelected()"/>
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display:none;" id="actionState">
+	<p id="stateMessage"></p>
+</div>
+
+<div class="centered-container-grid" id="main-container" style="width:70%;display:none;">
+	
+	<div class="row-container-new">
+		<div class="col-container-new">
+			<div class="row-container-new">
+				<div class="col-container-new">
+					<div class="row-container-new" style="display:table;">
+						<img src="missing_image.jpg" style="height:100%;width:auto;max-width:100%;max-height:600px;" id="main-image" onclick="bigClick(event);">
+					</div>
+					<p id="carousel-message" style="margin-top: 4em;">Drag your .jpg/ .png files heres</p>
+					<ul class="ul-carousel" style="width:100%;" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" ondragstart="dragStart(event);" id="image-carousel">
+					</ul>
+					<button class="dark-button" id="upload-button" style="margin:10% 0px 0px;" onclick="openFileDialog();">upload</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row-container-new">
+		<div class="col-container-new">
+			<div class="row-container-new">
+				<div class="col-container-new">
+					<p style="text-align: left;">name:</p>
+					<div class="tag-editor">
+						<input class="tag-input" id="name-edit" placeholder="name">
+					</div>
+					<br>
+					<p style="text-align: left;">description:</p>
+					<textarea id="desc-edit" placeholder="description" style="width:100%;resize:none;text-align:left;margin-top: 0%; font-size: 16px;" onchange="updateTextArea(this);"></textarea>
+					<br>
+					<br>
+					<p style="text-align: left;">country tags:</p>
+					<div class="tag-editor">
+						<input class="tag-input" id="country-edit" placeholder="ex: germany, america, lithuania">
+					</div>
+					<br>
+					<p style="text-align: left;">year tags:</p>
+					<div class="tag-editor">
+						<input class="tag-input" id="year-edit" placeholder="ex: 1996, 2003">
+					</div>
+					<br>
+					<p style="text-align: left;">other tags:</p>
+					<div class="tag-editor">
+						<input class="tag-input" id="misc-edit" placeholder="ex: anniversary, old, blue">
+					</div>
+					<br>
+					<p style="text-align: left;">item type:</p>
+					<select name="sort" id="item-type" style="margin-bottom:1em;">
+						<option value="C">Collection</option>
+						<option value="T">Trade</option>
+						<option value="W">Want</option>
+					</select>
+					<br>
+					<span style="text-align: left; align-items: left; float:left;">item published (visible for all):
+						<input type="checkbox" id="published-checkbox">
+					</span>
+					<button class="dark-button" id="save" style="margin:10% 0px 0px;" onclick="saveTextChanges(event);">save</button>
+					<br>
+					<br>
+					<button class="red-button" id="delete" style="margin:10% 0px 0px;" onclick="deleteItem(event);">delete</button>
+					<br>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</div>
+
+<div style="display:none;" id="full-image" onclick="closeBigClick();">
+	<img src="">
+</div>
+
+<div class="fullscreen" id="processingRequest" style="display:none;">
+	<div style="height:100%; color:white; transform: translate(0%, 50%); -ms-transform: translate(0%, 50%);" id="processingRequest_count">
+		remaining requests: 2
+	</div>
+</div>
+
+
+</body>
+
+<footer>
+	<script>
+
+		function openFileDialog(){
+			document.getElementById("file1").value = null;
+			document.getElementById("file1").click();
+		}
+
+		function picturesSelected(){
+
+			if(document.getElementById("file1").files.length > 0){
+				for(let i=0; i < document.getElementById("file1").files.length; i++){
+					attemptAddItems(document.getElementById("file1").files[i]);
+				}
+			}
+			else{
+				document.getElementById("file1").value = null;
+			}
+
+			for(let i=0; i < files_to_upload.length; i++){
+				const formData = new FormData();
+
+				formData.append('base_image', files_to_upload[i]);
+				formData.append('catalog_object', page_item);
+
+				startRequest("catalog_"+page_item+"_pic_"+i, "POST", url = 'api/catalog-object-picture/', token = getToken(), data = formData, callBackFunction=fileUploaded);
+
+				modifyRequstCount(1);
+			}
+		}
+
+
+		let page_item = 0;
+
+		let page_json = null;
+
+		function deleteItem(e){
+			startRequest("item_"+page_json['id']+"_delete", "DELETE", url = 'api/catalog-object/'+page_json['id']+'/', token = getToken(), data = null, callBackFunction=onDeleted);
+
+			modifyRequstCount(1);
+		}
+
+		function onDeleted(res){
+			if(res['status'] == 204){
+				document.location.href='index.html';
+			}
+			else{
+				displayMessage("Unable to delete item");
+			}
+		}
+
+		function updateTextArea(textarea){
+			if(textarea == null){
+				return;
+			}
+
+			//let preEdit = textarea.value;
+			//let postEdit = preEdit.replace(/\n/g,'<br>');
+			//document.getElementById("text_count").innerHTML = postEdit.length+"/10,000";
+
+			textarea.style.height = 'inherit'; // Reset the height
+			const computed = window.getComputedStyle(textarea);
+			// Calculate the height
+			let height = parseInt(computed.getPropertyValue('border-top-width'), 10)
+						+ parseInt(computed.getPropertyValue('padding-top'), 10)
+						+ textarea.scrollHeight + 5
+						+ parseInt(computed.getPropertyValue('padding-bottom'), 10)
+						+ parseInt(computed.getPropertyValue('border-bottom-width'), 10);
+
+			let maxPxHeight = 300;
+			if(height > maxPxHeight){
+				height = maxPxHeight;
+			}
+
+			textarea.style.height = `${height}px`;
+		}
+
+		function saveTextChanges(e){
+			e.preventDefault();
+
+			data = {};
+
+			data['name'] = document.getElementById("name-edit").value.trim();
+
+			let postEdit = document.getElementById("desc-edit").value.replace(/\n/g,'<br>').trim();
+
+			data['description'] = postEdit;
+
+			console.log(postEdit);
+
+			all_tags = [];
+
+			tag_fields = [
+				[document.getElementById("country-edit"), "country"],
+				[document.getElementById("year-edit"), "year"],
+				[document.getElementById("misc-edit"), "*"],
+			];
+
+			for(let i=0; i < tag_fields.length; i++){
+				let stringValue = tag_fields[i][0].value;
+				let splitValues = stringValue.split(",");
+				for(let j=0; j < splitValues.length; j++){
+					let cleanedValue = splitValues[j].trim();
+					if(cleanedValue.length > 0){
+						_d = {};
+						_d[tag_fields[i][1]] = cleanedValue;
+						all_tags.push(_d);
+					}
+				}
+			}
+
+			data['object_type'] = document.getElementById("item-type").value;
+
+			data['tags'] = all_tags;
+
+			data['published'] = document.getElementById("published-checkbox").checked;
+
+			startRequest("item_"+page_json['id'], "PATCH", url = 'api/catalog-object/'+page_json['id']+'/', token = getToken(), data = data, callBackFunction=textEdited);
+
+			modifyRequstCount(1);
+		}
+
+		function displayMessage(msg){
+			showMain(false);
+			document.getElementById("actionState").style.display = "block";
+			document.getElementById("stateMessage").innerHTML = msg;
+		}
+
+		function showMain(show=true){
+			if(show){
+				document.getElementById('main-container').style.display = 'flex';
+			}
+			else{
+				document.getElementById('main-container').style.display = 'none';
+			}
+		}
+
+		function populateImages(json){
+
+			let carousel = document.getElementById('image-carousel');
+			carousel.innerHTML = "";
+
+			if(json['images'] == null || json['images'].length <= 0){
+				document.getElementById('main-image').src = "missing_image.jpg";
+				document.getElementById('carousel-message').innerHTML = "Drag your .jpg/ .png files heres";
+
+				return;
+			}
+
+			document.getElementById('carousel-message').innerHTML = "Drag to change image order (1st image is main image)";
+
+			for(let i=0; i < json['images'].length; i++){
+				carousel.innerHTML += `
+				<li draggable="true" id="draggable_${json['images'][i]['id']}_${json['images'][i]['order']}">
+					<img src="" json_id="${i}"  onclick="smallClicked(event);" />
+					<button class="close-button-right" picture_id="${json['images'][i]['id']}" onclick="deleteImage(event);">x</button>
+				</li>`;
+			}
+
+			for(let i=0; i < json['images'].length; i++){
+				getImageByURL(json['images'][i]['lq_image'], json['images'][i]['base_image'], document.getElementById(`draggable_${json['images'][i]['id']}_${json['images'][i]['order']}`).children[0], true);
+			}
+
+			for(let i=0; i < json['images'].length; i++){
+				getImageByURL(json['images'][i]['lq_image'], json['images'][i]['base_image'], document.getElementById(`draggable_${json['images'][i]['id']}_${json['images'][i]['order']}`).children[0], true);
+			}
+
+			getImageByURL(json['images'][0]['lq_image'], json['images'][0]['base_image'], document.getElementById('main-image'));
+
+		}
+
+		function deleteImage(e){
+			let current_id = e.target.getAttribute('picture_id');
+
+			if(current_id != null && current_id != undefined){
+				startRequest("picture_"+current_id+"_delete", "DELETE", url = 'api/catalog-object-picture/'+current_id+'/', token = getToken(), data = null, callBackFunction=pictureDelete);
+
+				modifyRequstCount(1);
+			}
+		}
+
+		function bigClick(e){
+			e.preventDefault();
+
+			if(e.target.src.includes("missing_image.jpg")){
+				return;
+			}
+
+			let ogSRC = document.getElementById('main-image');
+			let fullScreenDIV = document.getElementById('full-image');
+			let imgChild = fullScreenDIV.children[0];
+
+			if(fullScreenDIV.style.display == "none"){
+				imgChild.src = ogSRC.src;
+				fullScreenDIV.style.display = "block";
+				fullScreenDIV.classList.add("fullscreen");
+			}
+
+		}
+
+		function closeBigClick(){
+			let fullScreenDIV = document.getElementById('full-image');
+			if(fullScreenDIV.style.display != "none"){
+				fullScreenDIV.style.display = "none";
+				fullScreenDIV.classList.remove("fullscreen");
+			}
+		}
+
+		function smallClicked(e){
+			e.preventDefault();
+			let json_id = e.target.getAttribute('json_id');
+			getImageByURL(page_json['images'][json_id]['lq_image'], page_json['images'][json_id]['base_image'], document.getElementById('main-image'));
+		}
+
+		function fetchDone(res){
+			page_json = {};
+			if(res['status'] == 200){
+				page_json = res['json'];
+				//remove any loading overlay / show items
+				populateImages(res['json']);
+				populateText(res['json']);
+				showMain(true);
+			}
+			else{
+				displayMessage("Unable to fetch item");
+			}
+		}
+
+		function populateText(json){
+			document.getElementById("name-edit").value = json['name'].trim();
+
+			let postEdit = json['description'].replace(/<br>/g,"\n").trim();
+
+			document.getElementById("desc-edit").value = postEdit;
+
+			let countryTags = [];
+			let yearTags = [];
+			let miscTags = [];
+			
+
+			for(let i=0; i < json['tags'].length; i++){
+				if(json['tags'][i]['tag_type'] == "country"){
+					countryTags.push(json['tags'][i]['text'].trim())
+				}
+				else if(json['tags'][i]['tag_type'] == "year"){
+					yearTags.push(json['tags'][i]['text'].trim())
+				}
+				else if(json['tags'][i]['tag_type'] == "*"){
+					miscTags.push(json['tags'][i]['text'].trim())
+				}
+			}
+
+			document.getElementById("country-edit").value = countryTags.join(", ");
+			document.getElementById("year-edit").value = yearTags.join(", ");
+			document.getElementById("misc-edit").value = miscTags.join(", ");
+
+			document.getElementById("published-checkbox").checked = json['published'];
+
+			//use this to display banner if published or not
+			document.getElementById("published_msg_display").style.display = 'block';
+			if(json['published'] == true){
+				document.getElementById("published_msg_display").style.backgroundColor = "rgba(60,128,90,1)";
+				document.getElementById("published_msg").innerHTML = "this <b>IS</b> published";
+			}
+			else{
+				document.getElementById("published_msg_display").style.backgroundColor = "rgba(128,60,90,1)";
+				document.getElementById("published_msg").innerHTML = "this is <b>NOT</b> published";
+			}
+
+			document.getElementById("item-type").value = json['object_type'];
+
+		}
+
+		function refreshPageItem(){
+			const queryString = window.location.search;
+			const urlParams = new URLSearchParams(queryString);
+
+			if(urlParams.has('id')){
+				page_item = urlParams.get('id');
+				startRequest("object_"+page_item, "GET", url = 'api/catalog-object/'+page_item+'/', token = getToken(), data = null, callBackFunction=fetchDone);
+			}
+			else{
+				displayMessage("Unable to fetch item");
+			}
+		}
+		
+		
+		window.addEventListener("DOMContentLoaded", function(){
+			isAuthed().then(isAuthenticated => {
+				if (isAuthenticated) {
+
+
+					document.addEventListener('input', function(event) {
+						if (event.target.tagName.toLowerCase() === 'textarea') {
+							updateTextArea(event.target);
+						}
+					  });
+
+					window.addEventListener("drop", (ev) => {
+						ev.preventDefault();
+						currentlyDraggingReorder = null;
+					});
+
+					window.addEventListener("dragover", (event) => {
+						event.preventDefault();
+					});
+
+					refreshPageItem();
+
+				}
+				else{
+					document.location.href='profile.html';
+				}
+			}).catch(error => {
+				document.location.href='profile.html';
+			});
+
+		});
+
+		function dragOverHandler(ev) {
+			ev.preventDefault();
+		}
+
+		let totalRequestsInProcess = 0;
+		let editRequestInProgress = false;
+
+		function modifyRequstCount(v){
+			let fullScreenBlocker = document.getElementById('processingRequest');
+			let requestCount = document.getElementById('processingRequest_count');
+
+			totalRequestsInProcess += v;
+			if(totalRequestsInProcess <= 0){
+
+
+
+				editRequestInProgress = false;
+				totalRequestsInProcess = 0;
+
+				fullScreenBlocker.style.display = "none";
+				
+				if(!fullScreenBlocker.classList.contains("fullscreen")){
+					fullScreenBlocker.classList.remove("fullscreen");
+				}
+
+				refreshPageItem();
+
+			}
+			else{
+
+				fullScreenBlocker.style.display = "block";
+
+				if(!fullScreenBlocker.classList.contains("fullscreen")){
+					fullScreenBlocker.classList.add("fullscreen");
+				}
+
+				editRequestInProgress = true;
+			}
+
+			requestCount.innerHTML = "remaining requests: "+totalRequestsInProcess;
+		}
+
+		function fileUploaded(res){
+			modifyRequstCount(-1);
+		}
+
+		function pictureOrder(res){
+			modifyRequstCount(-1);
+		}
+
+		function textEdited(res){
+			modifyRequstCount(-1);
+		}
+
+		function pictureDelete(res){
+			modifyRequstCount(-1);
+		}
+
+				
+		let currentlyDraggingReorder = null;
+
+		function dragStart(e){
+			currentlyDraggingReorder = e.target;
+
+			if(currentlyDraggingReorder.nodeName == "IMG"){
+				currentlyDraggingReorder = currentlyDraggingReorder.parentNode;
+			}
+
+		}
+
+		const clamp = (num, min, max) => Math.min(Math.max(num, min), max)
+
+		function inverseLerp(vA,vB,vAB){
+			max = Math.max(vA,vB);
+			min = Math.min(vA,vB);
+
+			return clamp((vAB-min)/(max-min),0,1);
+		}
+
+		let files_to_upload = [];
+
+		function dropHandler(ev) {
+
+		  
+			// Prevent default behavior (Prevent file from being opened)
+			ev.preventDefault();
+
+			if(editRequestInProgress){
+				return;
+			}
+
+			//reorder file
+			if(currentlyDraggingReorder != null){
+
+				let carouselTarget = ev.target;
+				let x = ev.clientX;
+
+				if(carouselTarget.id != 'image-carousel'){
+					if(carouselTarget.nodeName == "IMG" && carouselTarget.parentNode.id.indexOf('draggable_') == 0){
+						carouselTarget = carouselTarget.parentNode.parentNode;
+					}
+				}
+
+				let relativeX = ev.clientX - carouselTarget.getBoundingClientRect().left + carouselTarget.scrollLeft;
+
+				existing_bounds = [];
+
+				for(let i=0; i < carouselTarget.childNodes.length; i++){
+					if(typeof carouselTarget.childNodes[i].getBoundingClientRect === "function"){
+						let cT = carouselTarget.childNodes[i].getBoundingClientRect()
+						let relativeCTX = cT.x - carouselTarget.getBoundingClientRect().left + carouselTarget.scrollLeft;
+						existing_bounds.push({'l':relativeCTX,'r':relativeCTX + cT.width,'o':carouselTarget.childNodes[i]});
+					}
+				}
+
+
+				
+				let surrounding = null;
+				let bias = -1;
+
+				for(let i = 0; i < existing_bounds.length; i++){
+
+					if(surrounding == null){
+						let right = null;
+						if(existing_bounds.length > 1){
+							right = existing_bounds[1]['o'];
+						}
+						surrounding = [null, existing_bounds[0]['o'], right];
+					}
+
+					if(relativeX > existing_bounds[i]['l']){
+						let left = null;
+
+						if(i > 0){
+							left = existing_bounds[i-1]['o'];
+						}
+
+						let right = null;
+
+						if((i+1) < existing_bounds.length){
+							right = existing_bounds[i+1]['o'];
+						}
+
+						surrounding = [left, existing_bounds[i]['o'], right];
+
+						bias = inverseLerp(existing_bounds[i]['l'],existing_bounds[i]['r'], relativeX);
+					}
+				}
+
+				//if bias > 0.57 put it to the right otherwise go left
+				let current_id = parseInt(currentlyDraggingReorder.id.split('_')[1]);
+				let current_order = parseInt(currentlyDraggingReorder.id.split('_')[2]);
+				let wanted_order = -1;
+
+				if(surrounding[1].id != currentlyDraggingReorder.id){//we've dragged it into something else and not itself
+					if(bias < 0.57){
+						if(surrounding[0] == null || surrounding[0].id != currentlyDraggingReorder.id){
+							if(surrounding[0] == null){//first
+								wanted_order = 0;
+							}
+							else{
+								wanted_order = parseInt(surrounding[1].id.split('_')[2]);
+								if(current_order < wanted_order){//no idea why
+									wanted_order = wanted_order - 1;
+								}
+							}
+						}
+					}
+					else{
+						if(surrounding[2] == null || surrounding[2].id != currentlyDraggingReorder.id){
+							if(surrounding[2] == null){//last
+								wanted_order = existing_bounds.length-1;
+							}
+							else{
+								wanted_order = parseInt(surrounding[1].id.split('_')[2]);
+							}
+						}
+					}
+				}
+
+				if(wanted_order != -1){
+					if(wanted_order < current_order){
+						currentlyDraggingReorder.parentNode.insertBefore(currentlyDraggingReorder, existing_bounds[wanted_order]['o']);
+					}
+					else{
+						currentlyDraggingReorder.parentNode.insertBefore(currentlyDraggingReorder, existing_bounds[wanted_order]['o'].nextElementSibling);
+					}
+
+					data = {
+						'order': wanted_order
+					}
+
+					startRequest("picture_"+current_id, "PATCH", url = 'api/catalog-object-picture/'+current_id+'/', token = getToken(), data = data, callBackFunction=pictureOrder);
+
+					modifyRequstCount(1);
+
+				}
+
+				currentlyDraggingReorder = null;
+				return;
+			}
+
+			console.log("File(s) dropped");
+
+			currentlyDraggingReorder = null;
+		  
+			if (ev.dataTransfer.items) {
+			  // Use DataTransferItemList interface to access the file(s)
+			  [...ev.dataTransfer.items].forEach((item, i) => {
+				// If dropped items aren't files, reject them
+				if (item.kind === "file") {
+				  const file = item.getAsFile();
+				  attemptAddItems(file);
+				}
+			  });
+			} else {
+			  // Use DataTransfer interface to access the file(s)
+			  [...ev.dataTransfer.files].forEach((file, i) => {
+				attemptAddItems(file);
+			  });
+			}
+
+			for(let i=0; i < files_to_upload.length; i++){
+				const formData = new FormData();
+
+				formData.append('base_image', files_to_upload[i]);
+				formData.append('catalog_object', page_item);
+
+				startRequest("catalog_"+page_item+"_pic_"+i, "POST", url = 'api/catalog-object-picture/', token = getToken(), data = formData, callBackFunction=fileUploaded);
+
+				modifyRequstCount(1);
+			}
+
+			files_to_upload = [];
+		}
+
+		function attemptAddItems(file){
+			const fileType = file['type'];
+			const validImageTypes = ['image/jpeg', 'image/png'];
+			if (validImageTypes.includes(fileType)) {
+				files_to_upload.push(file);
+			}
+		}
+		  
+		  
+	</script>
+</footer>
+
+</html>

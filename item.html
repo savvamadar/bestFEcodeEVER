@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="robots" content="noindex, nofollow">
+
+<title>Item</title>
+
+<link rel="stylesheet" href="shkalik-style.css">
+
+<script src="request_handler.js"></script>
+<script src="site_state.js"></script>
+<script src="image_cacher.js"></script>
+
+</head>
+
+<body style="background: #000;">
+
+
+<header>
+	<div id="errorMessageContainer" style="display:none;"></div>
+	<div class="header-container">
+		<h1 style="margin-bottom: 1em;">Shkalik</h1>
+		<h4 style="margin-bottom: 1.75em;">Premier Mini Vodka & Alcohol Bottle Collection</h4>
+		<img src="blank_profile_lq.png" alt="Profile Picture" class="profile-pic-floating" id="corner-profile" style="cursor:pointer;" onclick="document.location.href='profile.html';" >
+		<script>
+
+			if(quickIsAuthed()){
+				if(JSON.parse(sessionStorage['sessionProfile'])['profilepicture'] != null){
+					getImageByURL(
+						JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['lq'],
+						JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['hq'],
+						document.getElementById('corner-profile'),
+						false
+					);
+				}
+			}
+			else{
+			
+				isAuthed().then(isAuthenticated => {
+					if (isAuthenticated) {
+						if(JSON.parse(sessionStorage['sessionProfile'])['profilepicture'] != null){
+							getImageByURL(
+								JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['lq'],
+								JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['hq'],
+								document.getElementById('corner-profile'),
+								false
+							);
+						}
+					}
+				}).catch(error => {
+					console.log(error);
+				});
+			}
+			
+		</script>
+
+		<nav>
+			<ul id="nav-bar">
+				<li><a href="index.html">Home</a></li>
+				<li><a href="index.html?type=trade">Trade</a></li>
+				<li><a href="index.html?type=want">Want</a></li>
+				<li><a href="about.html">About</a></li>
+				<li><a href="profile.html?id=3">Contact</a></li>
+			</ul>
+		</nav>
+	</div>
+	<script>adminNavInject();</script>
+</header>
+
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display:none;" id="actionState">
+	<p id="stateMessage"></p>
+</div>
+
+<div class="centered-container" id="main-container" style="width:80%; max-width:80%;background-color:#000;">
+	
+	<div class="col-container-new">
+		
+		<div class="col-container-new">
+			<div class="col-container-new" id="main_image_container" style="margin: auto;max-width: 90%; max-height: 70vh;">
+				<img src="missing_image.jpg" style="object-fit: contain; overflow: auto; cursor: pointer;" id="main-image" onclick="bigClick(event);">
+				<div class="comment-info-item">
+					<span id="picture-counter">image 1/4</span>
+				</div>
+			</div>
+			<div class="row-container-new" id="images_container">
+				<button class="dark-button" id="left-button" style="width: auto; display:none;" onclick="adjustMiniPage(-1);">&lt;</button>
+				<ul class="ul-carousel-prod" id="image-carousel">
+					<li style="display:none;"><img src="missing_image.jpg" style="padding: 0.5em;object-fit: contain;" id="img_pos_0" onclick="clickedMiniImage(event);"></li>
+					<li style="display:none;"><img src="missing_image.jpg" style="padding: 0.5em;object-fit: contain;" id="img_pos_1" onclick="clickedMiniImage(event);"></li>
+					<li style="display:none;"><img src="missing_image.jpg" style="padding: 0.5em;object-fit: contain;" id="img_pos_2" onclick="clickedMiniImage(event);"></li>
+					<li style="display:none;"><img src="missing_image.jpg" style="padding: 0.5em;object-fit: contain;" id="img_pos_3" onclick="clickedMiniImage(event);"></li>
+				</ul>
+				<button class="dark-button" id="right-button" style="width: auto; display:none;" onclick="adjustMiniPage(1);">&gt;</button>
+			</div>
+		</div>
+		<div class="col-container-new item-text-display" style="display:none;" id="text-display">
+			<div class="centered-container" style="max-height: 100%; height: 100%;"> <!--style="text-align: right;align-items: normal;"-->
+				<h1 style="color:white; margin-bottom: 0.2em;margin-top: 0.2em;" id="item-name"></h1>
+				<div class="comment-info-item" style="margin-top:0;margin-bottom: 2em;">
+					<span id="item-type">for trade</span>
+				</div>
+				<p style="color:white;" id="item-desc"></p>
+			</div>
+		</div>
+	</div>
+	<div class="row-container-new" style="background-color:#fff;">
+		<div class="comment-container-item" id="commentContainer" style="background-color:#fff;min-width:90%;width:90%;max-width:90%;">
+			<div id="new-comment-container" style="display:none;">
+				<h2 style="text-align: left;">New comment:</h2>
+				<div class="comment" id="base_comment">
+					<img src="blank_profile_lq.png" class="mini-pic" alt="Profile Picture" id="new-comment-picture" style="cursor: default; filter: none; position: absolute;"> <!-- ADD ON CLICK -->
+					<div style="margin-left: 4.5em;">
+						<h2 id="new-comment-username"></h2>
+						<textarea id="comment-edit" placeholder="comment" style="width:100%;resize:none;text-align:left;margin-top: 0%; font-size: 16px;" onchange="updateTextArea(this);"></textarea>
+						<div class="passive-detail" id="text_count_container" style="text-align:right;position: relative;margin: 0;margin-top:2px;">
+							<span id="text_count">0/2,000</span>
+						</div>
+					</div>
+					<button class="dark-button" style="width: 100%;" id="post-comment-button" onclick="postComment();">post comment</button>
+				</div>
+			</div>
+			<div id="login-comment-container" style="display:none;">
+				<h2 style="text-align: left;">Login to comment:</h2>
+				<button class="dark-button" style="width: 100%;" onclick="document.location.href='login.html';">login</button>
+			</div>
+			<select class="sort-select" name="sort" id="sort" onchange="retrieveComments();" style="margin:0;margin-top:3%;margin-bottom:1%;">
+				<option value="new">Newest First</option>
+				<option value="old">Oldest First</option>
+			</select>
+			
+		</div>	
+	</div>
+</div>
+
+
+<div style="display:none;" id="full-image" onclick="closeBigClick(event);">
+	<img src="">
+</div>
+
+
+</body>
+
+<footer>
+	<script>
+
+		function postComment(){
+			let newValue = document.getElementById("comment-edit").value.replace(/\n/g,'<br>');
+			
+			if(page_json != null){
+
+				data = {
+					'text': newValue,
+					'profile': JSON.parse(sessionStorage['sessionProfile'])['id'],
+					'catalog_object': page_json['id'],
+				}
+
+				startRequest("new_comment_"+page_item, "POST", url = 'api/comment/', token = getToken(), data = data, callBackFunction=refreshCommentsAndEnable);
+			
+				document.getElementById("post-comment-button").disabled = true; 
+				document.getElementById("comment-edit").readOnly = true;
+			
+			}
+
+
+		}
+
+		function refreshCommentsAndEnable(res){
+			if(res['status'] == 200 || res['status'] == 201){
+				enableComment(quickIsAuthed());
+				retrieveComments();
+			}
+			else{
+				document.getElementById("new-comment-container").innerHTML = 'unable to post comment';
+			}
+			//enableComment(quickIsAuthed());
+			//refreshComments(res);
+		}
+
+		let createdComments = [];
+		let allAvailableComments = [];
+
+		function retrieveComments(){
+			let sort_val = document.getElementById("sort").value;
+			startRequest("get_comments_"+page_item, "GET", url = 'api/comment/?catalog_id='+page_item+'&order_by='+sort_val, token = getToken(), data = null, callBackFunction=populateComments);
+		}
+
+		function populateComments(res){
+			if(res['status'] == 200 || res['status'] == 201){
+				allAvailableComments = res['json'];
+				maxPages = Math.ceil(allAvailableComments.length/ maxCommentsPerPage);
+				getPageComment(0);
+			}
+			else{
+				allAvailableComments = [];
+				createdComments = [];
+				document.getElementById("commentContainer").innerHTML = 'unable to retrieve comments';
+			}
+		}
+
+		let maxCommentsPerPage = 10;
+		let maxPages = 0;
+		function getPageComment(pageIndex){
+
+			let sortOldValue = document.getElementById("sort").value;
+
+			for(let i=0; i < createdComments.length; i++){
+				if(!!document.getElementById(createdComments[i])){
+					document.getElementById(createdComments[i]).remove();
+				}
+			}
+
+			createdComments = [];
+
+
+			document.getElementById("commentContainer");
+
+			
+
+			let minCommentIndex = pageIndex * maxCommentsPerPage;
+			let maxCommentIndex = minCommentIndex + maxCommentsPerPage;
+
+			for(let i = minCommentIndex; i < maxCommentIndex; i++){
+				if(i < allAvailableComments.length){
+					document.getElementById("commentContainer").innerHTML += `
+					<div class="comment" id="comment-${i}">
+						<img src="blank_profile_lq.png" class="mini-pic" alt="Profile Picture" id="comment-picture-${i}" style="cursor: pointer; filter: none; position: absolute;" onclick="document.location.href='profile.html?id=${allAvailableComments[i]['profile']['id']}';"/>
+						<div style="margin-left: 4.5em;">
+							<h2>${allAvailableComments[i]['profile']['display_name']}</h2>
+							<p style="margin-top: 1%;overflow-wrap: break-word;">${allAvailableComments[i]['text']}</p>
+						</div>
+						<div class="comment-info-item">
+							<span id="comment-date-${i}">${beautify_UTC(allAvailableComments[i]['created_at'])}</span>
+						</div>
+						<div style="position: relative; width:0; height:0;float: right; display: none;" id='delete-div-${i}'>
+							<button class="red-button" style="width:auto;position:absolute;right:0;bottom:0;padding: 0.4em;margin:0;" onclick='deleteComment(${i});'>DELETE</button>
+						</div>
+						<div style="position: relative; width:0; height:0;float: right; display: none;" id='hide-div-${i}'>
+							<button id="visibility-button-${i}" class="yellow-button" style="width:auto;position:absolute;right:5em;bottom:0;padding: 0.4em;margin:0;" onclick='adjustVisibility(this);'>HIDE</button>
+						</div>
+					</div>`;
+
+					if(JSON.parse(sessionStorage['sessionProfile'])['admin']){
+						document.getElementById('delete-div-'+i).style.display = 'inline-block';
+						document.getElementById('hide-div-'+i).style.display = 'inline-block';
+					}
+					else if(JSON.parse(sessionStorage['sessionProfile'])['id'] == allAvailableComments[i]['profile']['id']){
+						document.getElementById('hide-div-'+i).style.display = 'inline-block';
+						document.getElementById('visibility-button-'+i).style.right = 0;
+					}
+
+
+					if(allAvailableComments[i]['hidden']){
+						document.getElementById('comment-'+i).style.backgroundColor = "#ffffbc";
+						document.getElementById('comment-date-'+i).innerText += " - HIDDEN";
+						document.getElementById('visibility-button-'+i).innerText = "UNHIDE";
+					}
+					else{
+						document.getElementById('visibility-button-'+i).innerText = "HIDE";
+					}
+
+					if(allAvailableComments[i]['profile']['admin']){
+						document.getElementById('comment-picture-'+i).style.outline = "#248afd solid 3px";
+					}
+
+					createdComments.push("comment-"+i);
+				}
+			}
+
+			let nFactor = 2;
+
+			if(maxPages > 1){
+
+				let spans = '';
+				if(maxPages <= ((nFactor*2)+1)){
+					for(let i=1; i <= maxPages; i++){
+						if(i == (pageIndex+1)){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none; '>${i}</span>`;
+						}
+						else{
+							spans += `<span class='stylized-pagination' onclick='getPageComment(${i-1});'>${i}</span>`;
+						}
+					}
+				}
+				else{
+					if((pageIndex-nFactor) > 0){
+						spans += `<span class='stylized-pagination' onclick='getPageComment(0);'>1</span>`;
+						if((pageIndex-nFactor) > 1){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none; '>...</span>`;
+						}
+					}
+
+
+					for(let i=pageIndex-nFactor; i <= pageIndex+nFactor; i++){
+						if(i >= 0 && i < maxPages){
+							if(i == pageIndex){
+								spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none;'>${i+1}</span>`;
+							}
+							else{
+								spans += `<span class='stylized-pagination' onclick='getPageComment(${i});'>${i+1}</span>`;
+							}
+						}
+					}
+
+					if((pageIndex+nFactor) < (maxPages - 1)){
+						if((pageIndex+nFactor) < maxPages - 2){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none;' >...</span>`;
+						}
+						spans += `<span class='stylized-pagination' onclick='getPageComment(${maxPages-1});'>${maxPages}</span>`;
+					}
+				}
+
+				document.getElementById("commentContainer").innerHTML += `<div class="row-container-new" style='margin-top:1em;' id='traverse-comments'>
+					${spans}
+				</div>`;
+
+				createdComments.push("traverse-comments");
+				
+			}
+
+			for(let i = minCommentIndex; i < maxCommentIndex; i++){
+				if(i < allAvailableComments.length){
+					if(allAvailableComments[i]['profile']['profilepicture'] != null){
+						getImageByURL(
+								allAvailableComments[i]['profile']['profilepicture']['lq'],
+								allAvailableComments[i]['profile']['profilepicture']['hq'],
+								document.getElementById('comment-picture-'+i),
+								true
+							);
+					}
+				}
+			}
+
+			document.getElementById("sort").value = sortOldValue;
+
+		}
+
+		function deleteComment(commentIndex){
+			let commentID = allAvailableComments[parseInt(commentIndex)]['id'];
+
+			startRequest("comment_delete_"+commentID, "DELETE", url = 'api/comment/'+commentID+'/', token = getToken(), data = null, callBackFunction=retrieveComments);
+		}
+
+		function adjustVisibility(target){
+			let commentTargetIndex = target.id.replace('visibility-button-','');
+			let commentID = allAvailableComments[parseInt(commentTargetIndex)]['id'];
+
+			data = {};
+			
+			if(target.innerText == "UNHIDE"){
+				data['hidden'] = false;
+			}
+			else{
+				data['hidden'] = true;
+			}
+
+			startRequest("comment_visibility_"+commentID, "PATCH", url = 'api/comment/'+commentID+'/', token = getToken(), data = data, callBackFunction=retrieveComments);
+
+		}
+
+
+
+		function clickedMiniImage(e){
+			e.preventDefault();
+
+			if(e.target.style.display == "none"){
+				return;
+			}
+
+			let image_url_index = e.target.getAttribute("image_url_index");
+
+			if(image_url_index != null && image_url_index < itemImageURLS.length && image_url_index >= 0){
+				setMainImage(parseInt(image_url_index));
+			}
+		}
+
+		function bigClick(e){
+			e.preventDefault();
+
+			if(e.target.src.includes("missing_image.jpg")){
+				return;
+			}
+
+			let ogSRC = document.getElementById('main-image');
+			let fullScreenDIV = document.getElementById('full-image');
+			let imgChild = fullScreenDIV.children[0];
+
+			if(fullScreenDIV.style.display == "none"){
+				imgChild.src = ogSRC.src;
+				fullScreenDIV.style.display = "block";
+				fullScreenDIV.classList.add("fullscreen");
+			}
+
+		}
+
+		function closeBigClick(e){
+
+			e.preventDefault();
+
+			let fullScreenDIV = document.getElementById('full-image');
+			if(fullScreenDIV.style.display != "none"){
+				fullScreenDIV.style.display = "none";
+				fullScreenDIV.classList.remove("fullscreen");
+			}
+		}
+
+		let page_item = 0;
+
+		let page_json = null;
+
+
+		function updateTextArea(textarea){
+			if(textarea == null){
+				return;
+			}
+
+			let preEdit = textarea.value;
+			let postEdit = preEdit.replace(/\n/g,'<br>');
+
+			let visualPE = postEdit.length;
+			visualPE = visualPE.toLocaleString('en-US', {maximumFractionDigits:0});
+
+			document.getElementById("text_count").innerHTML = visualPE+"/2,000";
+
+			textarea.style.height = 'inherit'; // Reset the height
+			const computed = window.getComputedStyle(textarea);
+			// Calculate the height
+			const height = parseInt(computed.getPropertyValue('border-top-width'), 10)
+						+ parseInt(computed.getPropertyValue('padding-top'), 10)
+						+ textarea.scrollHeight + 5
+						+ parseInt(computed.getPropertyValue('padding-bottom'), 10)
+						+ parseInt(computed.getPropertyValue('border-bottom-width'), 10);
+
+			textarea.style.height = `${height}px`;
+		}
+
+		function displayMessage(msg){
+			showMain(false);
+			document.getElementById("actionState").style.display = "block";
+			document.getElementById("stateMessage").innerHTML = msg;
+		}
+
+		function showMain(show=true){
+			if(show){
+				document.getElementById('main-container').style.display = 'flex';
+			}
+			else{
+				document.getElementById('main-container').style.display = 'none';
+			}
+		}
+
+		let itemImageURLS = [];
+		let currentImageIndex = 0;
+		let currentMiniPage = 0;
+
+
+		function populateImages(json){
+
+			itemImageURLS = [];
+
+			if(json['images'] == null || json['images'].length == 0){
+				console.log("empty");
+			}
+			else{
+				for(let i=0; i < json['images'].length; i++){
+					itemImageURLS.push([json['images'][i]['lq_image'], json['images'][i]['base_image']]);
+				}
+			}
+
+			setMainImage(0);
+			setMiniPage(0);
+		}
+
+		function adjustMiniPage(dir){
+			let newMiniPage = currentMiniPage + dir;
+
+			if(newMiniPage < 0){
+				newMiniPage = 0;
+			}
+
+			let maxPage = Math.ceil(itemImageURLS.length / 4)-1;
+
+			if(newMiniPage > maxPage){
+				newMiniPage = maxPage;
+			}
+
+			if(newMiniPage != currentMiniPage){
+				setMiniPage(newMiniPage);
+			}
+		}
+
+		function setMainImage(imgIndex){
+			if(itemImageURLS.length <= 0){
+				document.getElementById("picture-counter").innerHTML = "image 1/1";
+				document.getElementById("left-button").style.display = "none";
+				document.getElementById("right-button").style.display = "none";
+
+				document.getElementById("img_pos_0").style.display = "none";
+				document.getElementById("img_pos_1").style.display = "none";
+				document.getElementById("img_pos_2").style.display = "none";
+				document.getElementById("img_pos_3").style.display = "none";
+
+				if(document.getElementById("main-image").src != "missing_image.jpg"){
+					document.getElementById("main-image").src = "missing_image.jpg";
+				}
+			}
+			else {
+				getImageByURL(
+							itemImageURLS[imgIndex][0],
+							itemImageURLS[imgIndex][1],
+							document.getElementById("main-image"),
+							false
+						);
+				document.getElementById("picture-counter").innerHTML = "image "+(imgIndex+1)+"/"+itemImageURLS.length;
+			}
+
+			currentImageIndex = imgIndex;
+		}
+
+		function setMiniPage(desiredPaged){
+			if(itemImageURLS.length <= 0){
+				document.getElementById("picture-counter").innerHTML = "image 1/1";
+				document.getElementById("left-button").style.display = "none";
+				document.getElementById("right-button").style.display = "none";
+
+				for(let i=0; i < 4; i++){
+					document.getElementById("img_pos_"+i).parentNode.style.display = "none";
+					document.getElementById("img_pos_"+i).setAttribute("image_url_index", -1);
+				}
+
+
+				if(document.getElementById("main-image").src != "missing_image.jpg"){
+					document.getElementById("main-image").src = "missing_image.jpg";
+				}
+			}
+			else{
+				if(itemImageURLS.length < 4){
+					document.getElementById("left-button").style.display = "none";
+					document.getElementById("right-button").style.display = "none";
+
+					for(let i=0; i < 4; i++){
+						document.getElementById("img_pos_"+i).parentNode.style.display = "none";
+						document.getElementById("img_pos_"+i).setAttribute("image_url_index", -1);
+					}
+
+					for(let i=0; i < itemImageURLS.length; i++){
+						document.getElementById("img_pos_"+i).parentNode.style.display = 'inline-block';
+						document.getElementById("img_pos_"+i).setAttribute("image_url_index", i);
+
+						getImageByURL(
+							itemImageURLS[i][0],
+							itemImageURLS[i][1],
+							document.getElementById("img_pos_"+i),
+							true
+						);
+					}
+				}
+				else{
+					let minPage = 0;
+					let maxPage = Math.ceil(itemImageURLS.length / 4)-1;
+
+					document.getElementById("left-button").style.display = "inline-block";
+					document.getElementById("right-button").style.display = "inline-block";
+
+					if(minPage == desiredPaged){
+						document.getElementById("left-button").style.display = "none";
+					}
+					if(maxPage == desiredPaged){
+						document.getElementById("right-button").style.display = "none";
+					}
+
+					let pageStartIndex = desiredPaged * 4;
+					let pageEndIndex = Math.min(itemImageURLS.length, pageStartIndex + 4);
+
+					for(let i=0; i < 4; i++){
+						document.getElementById("img_pos_"+i).parentNode.style.display = "none";
+						document.getElementById("img_pos_"+i).setAttribute("image_url_index", -1);
+					}
+
+					let _c = 0;
+					for(let i=pageStartIndex; i < pageEndIndex; i++){
+						document.getElementById("img_pos_"+_c).parentNode.style.display = 'inline-block';
+						document.getElementById("img_pos_"+_c).setAttribute("image_url_index", i);
+
+						getImageByURL(
+							itemImageURLS[i][0],
+							itemImageURLS[i][1],
+							document.getElementById("img_pos_"+_c),
+							true
+						);
+
+						_c += 1;
+					}
+					
+				}
+			}
+
+			currentMiniPage = desiredPaged;
+		}
+
+		function populateText(json){
+			document.getElementById("text-display").style.display = "none";
+
+			let tempDesc = '';
+			if(json['description'] != null){
+				tempDesc = json['description'];
+			}
+
+			tempDesc = tempDesc.replace(/<br>/g,"\n").trim();
+
+			document.getElementById("item-name").innerHTML = json['name'].trim();
+
+			document.getElementById("item-desc").innerText = tempDesc;
+
+			document.getElementById("text-display").style.display = 'inline-block';
+
+			if(json['object_type'] == 'T'){
+				document.getElementById("item-type").innerHTML = 'this item is up for trade';
+			}
+			else if(json['object_type'] == 'W'){
+				document.getElementById("item-type").innerHTML = 'if you have this item please contact me';
+			}
+			else{
+				document.getElementById("item-type").innerHTML = '';
+			}
+
+
+		}
+
+
+		function fetchDone(res){
+			page_json = {};
+			if(res['status'] == 200){
+				page_json = res['json'];
+				populateImages(res['json']);
+				populateText(res['json']);
+
+				enableComment(quickIsAuthed());
+				retrieveComments();
+			}
+			else{
+				displayMessage("Unable to fetch item");
+			}
+		}
+
+		function refreshPageItem(){
+			const queryString = window.location.search;
+			const urlParams = new URLSearchParams(queryString);
+
+			if(urlParams.has('id')){
+				page_item = urlParams.get('id');
+				startRequest("object_"+page_item, "GET", url = 'api/catalog-object/'+page_item+'/', token = getToken(), data = null, callBackFunction=fetchDone);
+			}
+			else{
+				displayMessage("Unable to fetch item");
+			}
+		}
+
+		function enableComment(b){
+			if(b){
+
+				if(JSON.parse(sessionStorage['sessionProfile'])['profilepicture'] != null){
+					getImageByURL(
+						JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['lq'],
+						JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['hq'],
+						document.getElementById('new-comment-picture'),
+						false
+					);
+				}
+
+				
+				document.getElementById("comment-edit").value = '';
+				document.getElementById("comment-edit").readOnly = false;
+				document.getElementById("post-comment-button").disabled = false; 
+
+				document.getElementById("new-comment-username").innerText = JSON.parse(sessionStorage['sessionProfile'])['display_name'];
+
+
+				document.getElementById("new-comment-container").style.display = 'block';
+				document.getElementById("login-comment-container").style.display = 'none';
+			}
+			else{
+				document.getElementById("comment-edit").readOnly = true;
+				document.getElementById("post-comment-button").disabled = true; 
+				document.getElementById("new-comment-container").style.display = 'none';
+				document.getElementById("login-comment-container").style.display = 'block';
+			}
+		}
+		
+		
+		window.addEventListener("DOMContentLoaded", function(){
+			isAuthed().then(isAuthenticated => {
+				if (isAuthenticated) {
+
+					document.addEventListener('input', function(event) {
+						if (event.target.tagName.toLowerCase() === 'textarea') {
+							updateTextArea(event.target);
+						}
+					  });
+
+				}
+
+				refreshPageItem();
+
+			}).catch(error => {
+				refreshPageItem();
+			});
+	
+
+		});
+
+		  
+	</script>
+</footer>
+
+</html>

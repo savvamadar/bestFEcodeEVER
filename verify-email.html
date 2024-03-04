@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="robots" content="noindex, nofollow">
+
+<title>Verification</title>
+
+<link rel="stylesheet" href="shkalik-style.css">
+
+<script src="request_handler.js"></script>
+<script src="site_state.js"></script>
+<script src="image_cacher.js"></script>
+
+</head>
+
+<body>
+
+<header>
+	<div id="errorMessageContainer" style="display: none;"></div>
+	<div class="header-container">
+		<h1 style="margin-bottom: 1em;">Shkalik</h1>
+		<h4 style="margin-bottom: 1.75em;">Premier Mini Vodka & Alcohol Bottle Collection</h4>
+		<!-- <img src="blank_profile.png" alt="Profile Picture" class="profile-pic"> NO PFP ON VEIRFY PAGE--> 
+		<nav>
+			<ul id="nav-bar">
+				<li><a href="index.html">Home</a></li>
+				<li><a href="index.html?type=trade">Trade</a></li>
+				<li><a href="index.html?type=want">Want</a></li>
+				<li><a href="about.html">About</a></li>
+				<li><a href="profile.html?id=3">Contact</a></li>
+			</ul>
+		</nav>
+	</div>
+	<script>adminNavInject();</script>
+</header>
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display:none;" id="actionState">
+	<p id="stateMessage"></p>
+</div>
+
+
+</body>
+
+<footer>
+	<script>
+		function displayMessage(msg){
+			document.getElementById("actionState").style.display = "block";
+			document.getElementById("stateMessage").innerHTML = msg;
+		}
+
+		function verificationDone(){
+
+			isAuthed().then(isAuthenticated => {
+				if(isAuthenticated){
+					displayMessage("Verification successful");
+					window.location.href = '/profile.html';
+				}
+				else{
+					displayMessage("Verification failed");
+				}
+			}).catch(error => {
+				console.error("Authentication check failed:"+error);
+			});
+		}
+		
+		function verify(res){
+			if(res['status'] == 200){
+				displayMessage("Processing verification request");
+				refreshToken(res['json']['token'], verificationDone);
+			}
+		}
+		
+		window.addEventListener("load", function(){
+			const queryString = window.location.search;
+			const urlParams = new URLSearchParams(queryString);
+
+			if(urlParams.has('verification')){
+				displayMessage("Sending verification request");
+				startRequest("verify", "GET", url = `app/verify-email/${urlParams.get('verification')}/`, token = null, data = null, callBackFunction=verify);
+			}
+			else{
+				displayMessage("There was an issue completing your verification");
+			}
+		});
+	</script>
+</footer>
+
+</html>

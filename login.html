@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="robots" content="noindex, nofollow">
+
+<title>Login</title>
+
+<link rel="stylesheet" href="shkalik-style.css">
+
+<script src="request_handler.js"></script>
+<script src="site_state.js"></script>
+<script src="image_cacher.js"></script>
+
+</head>
+
+<body>
+
+<header>
+	<div id="errorMessageContainer" style="display: none;"></div>
+	<div class="header-container">
+		<h1 style="margin-bottom: 1em;">Shkalik</h1>
+		<h4 style="margin-bottom: 1.75em;">Premier Mini Vodka & Alcohol Bottle Collection</h4>
+		<!-- <img src="blank_profile.png" alt="Profile Picture" class="profile-pic"> NO PFP ON LOGIN PAGE--> 
+		<nav>
+			<ul id="nav-bar">
+				<li><a href="index.html">Home</a></li>
+				<li><a href="index.html?type=trade">Trade</a></li>
+				<li><a href="index.html?type=want">Want</a></li>
+				<li><a href="about.html">About</a></li>
+				<li><a href="profile.html?id=3">Contact</a></li>
+			</ul>
+		</nav>
+	</div>
+	<script>adminNavInject();</script>
+</header>
+
+<div class="centered-container" style="width: 50%; margin: 10em auto;" id="actionSelection">
+	<button class="dark-button" onclick="switchAction('login');">Login</button>
+	<button class="dark-button" onclick="switchAction('sign-up');">Register</button>
+	<a class="reset-pw-link" href="#" onclick="switchAction('forgot'); return false;">Reset Password</a>
+</div>
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display: none;" id="actionState">
+	<p id="stateMessage"></p>
+</div>
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display: none;" id="loginForm">
+	<form class="centered-container" name="loginForm" autocomplete="on">
+		<input type="text" class="single-line" style="width: 100%;" name="email" id="loginForm_EMAIL" placeholder="Email" autocomplete="email" autocapitalize="none" required>
+		<input type="password" class="single-line" style="width: 100%;"  name="password" id="loginForm_PASSWORD" placeholder="Password" autocomplete="current-password" autocapitalize="none" required>
+		<input class="dark-button" type="submit" value="Login" />
+		<a class="login-back" href="#" onclick="switchAction('back'); return false;">back</a>
+	</form>
+</div>
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display: none;" id="registerForm">
+	<form class="centered-container" name="registerForm" autocomplete="on">
+		<input type="text" class="single-line" style="width: 100%;" name="username" id="registerForm_USERNAME" placeholder="Username" autocomplete="username" autocapitalize="none" required>
+		<div style="width: 100%;display:flex;justify-content: space-between;">
+			<input type="text" class="single-line" style="width: 48%;" name="fname" id="registerForm_FNAME" placeholder="First name" autocomplete="given-name" required>
+			<input type="text" class="single-line" style="width: 48%;" name="lname" id="registerForm_LNAME" placeholder="Last name" autocomplete="family-name" required>
+		</div>
+		<input type="text" class="single-line" style="width: 100%;" name="email" id="registerForm_EMAIL" placeholder="Email" autocomplete="email" autocapitalize="none" required>
+		<input type="password" class="single-line" style="width: 100%;"  name="password" id="registerForm_PASSWORD" placeholder="Password" autocomplete="new-password" autocapitalize="none" required>
+		<input class="dark-button" type="submit" value="Register" />
+		<a class="login-back" href="#" onclick="switchAction('back'); return false;">back</a>
+	</form>
+</div>
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display: none;" id="resetForm">
+	<form class="centered-container" name="resetForm">
+		<input type="text" class="single-line" style="width: 100%;" name="email" id="resetForm_EMAIL" placeholder="Email" required>
+		<button class="dark-button" type="submit">Reset Password</button>
+		<a class="login-back" href="#" onclick="switchAction('back'); return false;">back</a>
+	</form>
+</div>
+
+
+</body>
+
+<footer>
+	<script>
+		let proccessing = false;
+		function switchAction(action){
+			if(proccessing){
+				return;
+			}
+			document.getElementById("actionSelection").style.display = "none";
+			document.getElementById("registerForm").style.display = "none";
+			document.getElementById("loginForm").style.display = "none";
+			document.getElementById("resetForm").style.display = "none";
+			if(action == 'login'){
+				toggleFormInputs("loginForm", true);
+				document.getElementById("loginForm").style.display = "block";
+			}
+			else if(action == 'sign-up'){
+				toggleFormInputs("registerForm", true);
+				document.getElementById("registerForm").style.display = "block";
+			}
+			else if(action == 'forgot'){
+				toggleFormInputs("resetForm", true);
+				document.getElementById("resetForm").style.display = "block";
+			}
+			else{
+				document.getElementById("actionSelection").style.display = "block";
+			}
+		}
+		
+		function displayMessage(msg){
+			hideAllForms();
+			document.getElementById("actionState").style.display = "block";
+			document.getElementById("stateMessage").innerHTML = msg;
+		}
+
+		function finishLogin(){
+			isAuthed().then(isAuthenticated => {
+				if (isAuthenticated) {
+					window.location.href = '/profile.html';
+				}
+				else{
+					displayMessage("There was an error logging in");
+				}
+			}).catch(error => {
+				displayMessage("Authentication check failed:"+error);
+			});
+		}
+
+		function reset(res){
+			proccessing = false;
+			if(res['status'] == 200){
+				hideAllForms();
+				displayMessage("A 1-hour reset link was sent to <b>"+(document.getElementById('resetForm_EMAIL').value)+"</b> if it is a registered email<br><br>Remember to check your Spam folder");
+			}
+			else{
+				toggleFormInputs("resetForm", true);
+				console.log("reset fail");
+			}
+
+		}
+		
+		function login(res){
+			proccessing = false;
+			if(res['status'] == 200){
+				hideAllForms();
+				refreshToken(res['json']['token'], finishLogin);
+			}
+			else{
+				toggleFormInputs("loginForm", true);
+				console.log("login fail");
+			}
+		}
+		
+		function register(res){
+			proccessing = false;
+			if(res['status'] == 201){
+				console.log("reg succ");
+				displayMessage("Check <b>"+res['json']['email']+"</b> to verify your address and finish your registration<br><br>Remember to check your Spam folder");
+			}
+			else{
+				toggleFormInputs("registerForm", true);
+				console.log("reg fail");
+			}
+		}
+		
+		function hideAllForms(){
+			for(let i=0; i < document.forms.length; i++){
+				document.forms[i].style.display = "none"
+			}
+		}
+		
+		function toggleFormInputs(formName, onState){
+			let formInputs = document.forms[formName].getElementsByTagName("input");
+			
+			for(let i=0; i < formInputs.length; i++){
+				formInputs[i].disabled = !onState;
+			}
+			
+			let buttons = document.forms[formName].getElementsByTagName("button");
+			if(buttons.length > 0){
+				buttons[0].disabled = !onState;
+			}
+		}
+		
+		document.getElementById('loginForm').onsubmit = async function(event) {
+            event.preventDefault(); // Prevent form from submitting to server
+			
+            let email = document.getElementById('loginForm_EMAIL').value;
+			let password = document.getElementById('loginForm_PASSWORD').value;
+			
+			proccessing = true;
+			
+			toggleFormInputs("loginForm", false);
+
+
+			startRequest("login", "POST", url = 'app/login/', token = null, data = {'email':email,'password':password}, callBackFunction=login);
+        };
+
+		document.getElementById('resetForm').onsubmit = async function(event) {
+            event.preventDefault(); // Prevent form from submitting to server
+			
+            let email = document.getElementById('resetForm_EMAIL').value;
+			
+			proccessing = true;
+			
+			toggleFormInputs("resetForm", false);
+
+
+			startRequest("reset-password-create", "POST", url = 'app/reset-password/', token = null, data = {'email':email,'step':'create'}, callBackFunction=reset);
+        };
+		
+		document.getElementById('registerForm').onsubmit = async function(event) {
+            event.preventDefault(); // Prevent form from submitting to server
+			
+            let email = document.getElementById('registerForm_EMAIL').value;
+			let password = document.getElementById('registerForm_PASSWORD').value;
+			let fname = document.getElementById('registerForm_FNAME').value;
+			let lname = document.getElementById('registerForm_LNAME').value;
+			let username = document.getElementById('registerForm_USERNAME').value;
+			
+			proccessing = true;
+
+			toggleFormInputs("registerForm", false);
+
+			//register({'status':201, 'json':{'email':'savva.madar@gmail.com'}});
+
+			startRequest("register", "POST", url = 'app/sign-up/', token = null, data = {'email':email,'password':password,"username":username,"first_name":fname,"last_name":lname}, callBackFunction=register);
+        };
+
+		window.addEventListener("DOMContentLoaded", function(){
+			isAuthed().then(isAuthenticated => {
+				if (isAuthenticated) {
+					window.location.href = '/profile.html';
+				}
+			}).catch(error => {
+				displayMessage("Authentication check failed:"+error);
+			});
+		});
+	</script>
+</footer>
+
+</html>

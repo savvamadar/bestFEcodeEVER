@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="robots" content="noindex, nofollow">
+
+<title>Admin</title>
+
+<link rel="stylesheet" href="shkalik-style.css">
+
+<script src="request_handler.js"></script>
+<script src="site_state.js"></script>
+<script src="image_cacher.js"></script>
+
+</head>
+
+<body>
+
+<header>
+	<div id="errorMessageContainer" style="display: none;"></div>
+	<div class="header-container">
+		<h1 style="margin-bottom: 1em;">Shkalik</h1>
+		<h4 style="margin-bottom: 1.75em;">Premier Mini Vodka & Alcohol Bottle Collection</h4>
+		<img src="blank_profile_lq.png" alt="Profile Picture" class="profile-pic-floating" id="corner-profile" style="cursor:pointer;" onclick="document.location.href='profile.html';" >
+        <script>
+
+			if(quickIsAuthed()){
+				if(JSON.parse(sessionStorage['sessionProfile'])['profilepicture'] != null){
+					getImageByURL(
+						JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['lq'],
+						JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['hq'],
+						document.getElementById('corner-profile'),
+						false
+					);
+				}
+			}
+			else{
+            
+				isAuthed().then(isAuthenticated => {
+					if (isAuthenticated) {
+						if(JSON.parse(sessionStorage['sessionProfile'])['profilepicture'] != null){
+							getImageByURL(
+								JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['lq'],
+								JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['hq'],
+								document.getElementById('corner-profile'),
+								false
+							);
+						}
+					}
+				}).catch(error => {
+					console.log(error);
+				});
+			}
+            
+        </script>
+		<nav>
+			<ul id="nav-bar">
+				<li><a href="index.html">Home</a></li>
+				<li><a href="index.html?type=trade">Trade</a></li>
+				<li><a href="index.html?type=want">Want</a></li>
+				<li><a href="about.html">About</a></li>
+				<li><a href="profile.html?id=3">Contact</a></li>
+			</ul>
+		</nav>
+	</div>
+	<script>adminNavInject();</script>
+</header>
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display:none;" id="actionState">
+	<p id="stateMessage"></p>
+</div>
+
+<div class="main-container" style="display: none;" id="main-container">
+
+	<div class="profile-container" id="button-container">
+		<button class="dark-button" onclick="fetchItem('comment');" id="view-comments-button" style="margin:2% 0px 0px;">view comments</button>
+		<button class="dark-button" onclick="fetchItem('user');" id="view-users-button" style="margin:2% 0px 0px;">view users</button>
+	</div>
+
+	<div class="comment-container" id="elementContainer" style="margin-bottom: 2em;margin-top: 1em;">
+		
+	</div>
+
+</div>
+  
+  
+
+
+</body>
+
+<footer>
+	<script>
+
+		function displayMessage(msg){
+			showMain(false);
+			document.getElementById("actionState").style.display = "block";
+			document.getElementById("stateMessage").innerHTML = msg;
+		}
+
+		function showMain(show=true){
+			if(show){
+				document.getElementById('main-container').style.display = 'grid';
+			}
+			else{
+				document.getElementById('main-container').style.display = 'none';
+			}
+		}
+
+		let elementType = '';
+		function fetchDone(res){
+			print(res);
+			if(res['status'] == 200){
+				populateElements(res);
+				
+			}
+			else{
+				elementType = '';
+				document.getElementById("elementContainer").innerHTML = "";
+				document.getElementById("elementContainer").innerText = "failed to get "+res['id'];
+			}
+		}
+
+		function refetchItem(){
+			fetchItem(elementType);
+		}
+
+		function fetchItem(itemType){
+			endPoint = '';
+			if(itemType == 'comment'){
+				endPoint = 'comment';
+			}
+			else if(itemType == 'user'){
+				endPoint = 'user';
+			}
+
+			let sortElement = document.getElementById("sort-"+itemType);
+			let sort_val = '';
+
+			if(sortElement){
+				sort_val = sortElement.value;
+			}
+			
+			if(sort_val == '' || !sort_val){
+				sort_val = '';
+				//['type', ['value1','value2'],['name1', 'name2']],
+				for(let i=0; i < elementOrderOptions.length; i++){
+					if(elementOrderOptions[i][0] == itemType){
+						sort_val = elementOrderOptions[i][1][0];
+						break;
+					}
+				}
+
+			}
+
+			if(sort_val != '' && !!sort_val){
+				sort_val = "?order_by="+sort_val;
+			}
+
+			elementType = itemType;
+
+			if(endPoint != ''){
+				startRequest("all_"+itemType, "GET", url = 'api/'+endPoint+'/'+sort_val, token = getToken(), data = null, callBackFunction=fetchDone);
+			}
+			else{
+				document.getElementById("elementContainer").innerHTML = "";
+			}
+		}
+
+		let elementOrderOptions = [
+			['comment', ['new','old'],['Newest', 'Oldest']],
+			['user', ['new','old', 'alphabet'], ['Newest', 'Oldest', 'Username']]
+		];
+
+		let allAvailableElements = [];
+		let maxPages = 0;
+
+		function populateElements(res){
+			if(res['status'] == 200){
+				allAvailableElements = res['json'];
+				maxPages = Math.ceil(allAvailableElements.length/ maxElementsPerPage);
+				getPageElement(0);
+			}
+			else{
+				allAvailableElements = [];
+				document.getElementById("elementContainer").innerText = "failed to get "+res['id'];
+			}
+		}
+
+		function fetchComments(res){
+			console.log(res);
+			fetchItem('comment');
+		}
+
+		function deleteComment(commentIndex){
+			let commentID = allAvailableElements[parseInt(commentIndex)]['id'];
+
+			startRequest("comment_delete_"+commentID, "DELETE", url = 'api/comment/'+commentID+'/', token = getToken(), data = null, callBackFunction=fetchComments);
+		}
+
+		function adjustVisibility(target){
+			let commentTargetIndex = target.id.replace('visibility-button-','');
+			let commentID = allAvailableElements[parseInt(commentTargetIndex)]['id'];
+
+			data = {};
+			
+			if(target.innerText == "UNHIDE"){
+				data['hidden'] = false;
+			}
+			else{
+				data['hidden'] = true;
+			}
+
+			startRequest("comment_visibility_"+commentID, "PATCH", url = 'api/comment/'+commentID+'/', token = getToken(), data = data, callBackFunction=fetchComments);
+
+		}
+
+		function appendUser(i){
+			let lq = "blank_profile_lq.png";
+
+			let profileAvailable = false;
+
+			if(allAvailableElements[i]['profile']){
+				profileAvailable = true;
+				if(allAvailableElements[i]['profile']['profilepicture']){
+					lq = allAvailableElements[i]['profile']['profilepicture']['lq'];
+				}
+			}
+
+			let mainStatus = 'status: active';
+			if(!allAvailableElements[i]['verified']){
+				mainStatus = 'status: verification incomplete';
+			}
+
+			if(!allAvailableElements[i]['is_active']){
+				mainStatus = 'status: banned';
+			}
+
+			let mainInfo = "";
+			let infoArr = [];
+			if(profileAvailable){
+				infoArr.push(['USER.ID',allAvailableElements[i]['id']]);
+				infoArr.push(['PROFILE.ID',allAvailableElements[i]['profile']['id']]);
+				infoArr.push(['Admin',allAvailableElements[i]['profile']['admin']]);
+				infoArr.push(['Display Name',allAvailableElements[i]['profile']['display_name']]);
+				infoArr.push(['Username',allAvailableElements[i]['username']]);
+				infoArr.push(['First name',allAvailableElements[i]['first_name']]);
+				infoArr.push(['Last name',allAvailableElements[i]['last_name']]);
+				infoArr.push(['Email',allAvailableElements[i]['email']]);
+			}
+			else{
+				infoArr.push(['USER.ID',allAvailableElements[i]['id']]);
+				infoArr.push(['Username',allAvailableElements[i]['username']]);
+				infoArr.push(['First name',allAvailableElements[i]['first_name']]);
+				infoArr.push(['Last name',allAvailableElements[i]['last_name']]);
+				infoArr.push(['Email',allAvailableElements[i]['email']]);
+			}
+
+			for(let i=0; i < infoArr.length; i++){
+				mainInfo += "<b>"+infoArr[i][0]+":</b> "+infoArr[i][1];
+				if(i < (infoArr.length - 1)){
+					mainInfo += "<br>";
+				}
+			}
+			
+
+			if(profileAvailable){
+				document.getElementById("elementContainer").innerHTML += `
+				<div class="comment" id="user-${i}">
+					<img src="${lq}" class="mini-pic" alt="Profile Picture" id="profile-picture-${i}" style="cursor: pointer; filter: none; position: absolute;" onclick="document.location.href='profile.html?id=${allAvailableElements[i]['profile']['id']}';"/>
+					<div style="margin-left: 4.5em;">
+						<h2 style='text-decoration: underline; cursor:pointer;' onclick="document.location.href='profile.html?id=${allAvailableElements[i]['profile']['id']}';" >${allAvailableElements[i]['email']}</h2>
+						<p style="margin-top: 1%;overflow-wrap: break-word;">${mainInfo}</p>
+					</div>
+					<div class="comment-info-item">
+						<span id="user-status-${i}">${mainStatus}</span>
+					</div>
+				</div>`;
+			}
+			else{
+				document.getElementById("elementContainer").innerHTML += `
+				<div class="comment" id="user-${i}">
+					<img src="${lq}" class="mini-pic" alt="Profile Picture" id="profile-picture-${i}" style="filter: none; position: absolute;" />
+					<div style="margin-left: 4.5em;">
+						<h2>${allAvailableElements[i]['email']}</h2>
+						<p style="margin-top: 1%;overflow-wrap: break-word;">${mainInfo}</p>
+					</div>
+					<div class="comment-info-item">
+						<span id="user-status-${i}">${mainStatus}</span>
+					</div>
+				</div>`;
+			}
+
+
+			if(!allAvailableElements[i]['verified']){
+				document.getElementById('user-'+i).style.backgroundColor = "#ffffbc";
+			}
+
+			if(!allAvailableElements[i]['is_active']){
+				document.getElementById('user-'+i).style.backgroundColor = "#ffbcbc";
+			}
+			
+			if(profileAvailable && allAvailableElements[i]['profile']['admin']){
+				document.getElementById('profile-picture-'+i).style.outline = "#248afd solid 3px";
+			}
+
+		}
+
+		function appendComment(i){
+			let lq = "blank_profile_lq.png";
+
+			if(allAvailableElements[i]['profile'] && allAvailableElements[i]['profile']['profilepicture']){
+				lq = allAvailableElements[i]['profile']['profilepicture']['lq'];
+			}
+
+			let safeObjName = 'DELETED';
+			let safeId = -1;
+
+			if(allAvailableElements[i]['catalog_object'] != null){
+				safeObjName = allAvailableElements[i]['catalog_object']['name'];
+				safeId = allAvailableElements[i]['catalog_object']['id'];
+			}
+
+			if(safeId == -1){
+				document.getElementById("elementContainer").innerHTML += `<div class="comment" id="comment-${i}">
+					<div style="margin-left: 4.5em;">
+						<h2>${safeObjName}</h2>
+						<h4>${allAvailableElements[i]['profile']['display_name']}</h4>
+						<p style="margin-top: 1%;overflow-wrap: break-word;">${allAvailableElements[i]['text']}</p>
+					</div>
+					<p style="margin-top: 1%;overflow-wrap: break-word;">${allAvailableComments[i]['text']}</p>
+					<div class="comment-info">
+						<span id="comment-date-${i}">${beautify_UTC(allAvailableComments[i]['created_at'])}</span>
+					</div>
+				</div>`;
+			}
+			else{
+				document.getElementById("elementContainer").innerHTML += `
+				<div class="comment" id="comment-${i}">
+					<img src="${lq}" class="mini-pic" alt="Profile Picture" id="comment-picture-${i}" style="cursor: pointer; filter: none; position: absolute;" onclick="document.location.href='profile.html?id=${allAvailableElements[i]['profile']['id']}';"/>
+					<div style="margin-left: 4.5em;">
+						<h2 style='text-decoration: underline; cursor:pointer;' onclick="document.location.href='item.html?id=${safeId}';">${safeObjName}</h2>
+						<h4>${allAvailableElements[i]['profile']['display_name']}</h4>
+						<p style="margin-top: 1%;overflow-wrap: break-word;">${allAvailableElements[i]['text']}</p>
+					</div>
+					<div class="comment-info-item">
+						<span id="comment-date-${i}">${beautify_UTC(allAvailableElements[i]['created_at'])}</span>
+					</div>
+					<div style="position: relative; width:0; height:0;float: right; display: none;" id='delete-div-${i}'>
+						<button class="red-button" style="width:auto;position:absolute;right:0;bottom:0;padding: 0.4em;margin:0;" onclick='deleteComment(${i});'>DELETE</button>
+					</div>
+					<div style="position: relative; width:0; height:0;float: right; display: none;" id='hide-div-${i}'>
+						<button id="visibility-button-${i}" class="yellow-button" style="width:auto;position:absolute;right:5em;bottom:0;padding: 0.4em;margin:0;" onclick='adjustVisibility(this);'>HIDE</button>
+					</div>
+				</div>`;
+			}
+
+			
+
+			document.getElementById('delete-div-'+i).style.display = 'inline-block';
+			document.getElementById('hide-div-'+i).style.display = 'inline-block';
+
+
+			if(allAvailableElements[i]['hidden']){
+				document.getElementById('comment-'+i).style.backgroundColor = "#ffffbc";
+				document.getElementById('comment-date-'+i).innerText += " - HIDDEN";
+				document.getElementById('visibility-button-'+i).innerText = "UNHIDE";
+			}
+			else{
+				document.getElementById('visibility-button-'+i).innerText = "HIDE";
+			}
+
+			if(allAvailableElements[i]['profile']['admin']){
+				document.getElementById('comment-picture-'+i).style.outline = "#248afd solid 3px";
+			}
+		}
+
+		let maxElementsPerPage = 10;
+		function getPageElement(pageIndex){
+
+			let oldSort = document.getElementById("sort-"+elementType);
+			let sort_val = '';
+
+			if(oldSort){
+				sort_val = oldSort.value;
+			}
+
+			//sortElement creation
+			let innerSort = '';
+			let sortIndex = -1;
+
+			//['type', ['value1','value2'],['name1', 'name2']],
+			for(let i=0; i < elementOrderOptions.length; i++){
+				if(elementOrderOptions[i][0] == elementType){
+					sortIndex = i;
+					break;
+				}
+			}
+
+			if(sortIndex >= 0){
+				for(let i=0; i < elementOrderOptions[sortIndex][1].length; i++){
+					let sortValue = elementOrderOptions[sortIndex][1][i];
+					let sortName = sortValue;
+					if(i < elementOrderOptions[sortIndex][2].length){
+						sortName = elementOrderOptions[sortIndex][2][i];
+					}
+					innerSort += `<option value="${sortValue}">${sortName}</option>`;
+				}
+
+			}
+
+			document.getElementById("elementContainer").innerHTML = "";
+
+			if(innerSort != ''){
+				document.getElementById("elementContainer").innerHTML += `<select class="sort-select" name="sort" id="sort-${elementType}" style="margin-bottom:1em;" onchange="refetchItem();" >${innerSort}</select>`;
+			}
+			
+
+
+			let minElementIndex = pageIndex * maxElementsPerPage;
+			let maxElementIndex = minElementIndex + maxElementsPerPage;
+
+			for(let i = minElementIndex; i < maxElementIndex; i++){
+				if(i < allAvailableElements.length){
+					if(elementType == 'comment'){
+						appendComment(i);
+					}
+					else if(elementType == 'user'){
+						appendUser(i);
+					}
+				}
+			}
+
+			let nFactor = 2;
+
+			if(maxPages > 1){
+
+				let spans = '';
+				if(maxPages <= ((nFactor*2)+1)){
+					for(let i=1; i <= maxPages; i++){
+						if(i == (pageIndex+1)){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none; '>${i}</span>`;
+						}
+						else{
+							spans += `<span class='stylized-pagination' onclick='getPageElement(${i-1});'>${i}</span>`;
+						}
+					}
+				}
+				else{
+					if((pageIndex-nFactor) > 0){
+						spans += `<span class='stylized-pagination' onclick='getPageElement(0);'>1</span>`;
+						if((pageIndex-nFactor) > 1){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none; '>...</span>`;
+						}
+					}
+
+
+					for(let i=pageIndex-nFactor; i <= pageIndex+nFactor; i++){
+						if(i >= 0 && i < maxPages){
+							if(i == pageIndex){
+								spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none;'>${i+1}</span>`;
+							}
+							else{
+								spans += `<span class='stylized-pagination' onclick='getPageElement(${i});'>${i+1}</span>`;
+							}
+						}
+					}
+
+					if((pageIndex+nFactor) < (maxPages - 1)){
+						if((pageIndex+nFactor) < maxPages - 2){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none;' >...</span>`;
+						}
+						spans += `<span class='stylized-pagination' onclick='getPageElement(${maxPages-1});'>${maxPages}</span>`;
+					}
+				}
+
+				document.getElementById("elementContainer").innerHTML += `<div class="row-container-new" style="margin-bottom: 2em;margin-top: 1em;" id='traverse-elements'>
+					${spans}
+				</div>`;
+				
+			}
+
+			if(innerSort != ''){
+				if(sort_val != ''){
+					document.getElementById("sort-"+elementType).value = sort_val;
+				}
+				else{
+					//['type', ['value1','value2'],['name1', 'name2']],
+					document.getElementById("sort-"+elementType).value = elementOrderOptions[sortIndex][1][0];
+				}
+			}
+
+		}
+		
+		
+		window.addEventListener("DOMContentLoaded", function(){
+			let reRoute = true;
+			isAuthed().then(isAuthenticated => {
+				if (isAuthenticated) {
+					if(JSON.parse(sessionStorage['sessionProfile'])['admin']){
+						reRoute = false;
+					}
+				}
+
+				if(reRoute){
+					window.location.href = 'index.html';
+				}
+				else{
+					showMain(true);
+					fetchItem('comment');
+				}
+
+			}).catch(error => {
+				console.log("Authentication check failed:"+error);
+				window.location.href = 'index.html';
+			});
+		});
+	</script>
+</footer>
+
+</html>

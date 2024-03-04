@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="description" content="Shkalik: Explore an exclusive collection of mini vodka and alcohol bottles, featuring a diverse range of rare and unique finds. Opportunities for trading, buying, and selling select bottles. Perfect for collectors and enthusiasts looking to expand their own assortments.">
+
+<title>Shkalik: Premier Mini Vodka & Alcohol Bottle Collection</title>
+
+<link rel="canonical" href="https://shkalik.com/">
+
+<link rel="stylesheet" href="shkalik-style.css">
+
+<script src="request_handler.js"></script>
+<script src="site_state.js"></script>
+<script src="image_cacher.js"></script>
+
+</head>
+
+<body>
+
+<header>
+	<div id="errorMessageContainer" style="display:none;"></div>
+	<div class="header-container">
+		<h1 style="margin-bottom: 1em;">Shkalik</h1>
+		<h4 style="margin-bottom: 1.75em;">Premier Mini Vodka & Alcohol Bottle Collection</h4>
+		<img src="blank_profile_lq.png" alt="Profile Picture" class="profile-pic-floating" id="corner-profile" style="cursor:pointer;" onclick="document.location.href='profile.html';" >
+        <script>
+
+			if(quickIsAuthed()){
+				if(JSON.parse(sessionStorage['sessionProfile'])['profilepicture'] != null){
+					getImageByURL(
+						JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['lq'],
+						JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['hq'],
+						document.getElementById('corner-profile'),
+						false
+					);
+				}
+			}
+			else{
+            
+				isAuthed().then(isAuthenticated => {
+					if (isAuthenticated) {
+						if(JSON.parse(sessionStorage['sessionProfile'])['profilepicture'] != null){
+							getImageByURL(
+								JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['lq'],
+								JSON.parse(sessionStorage['sessionProfile'])['profilepicture']['hq'],
+								document.getElementById('corner-profile'),
+								false
+							);
+						}
+					}
+				}).catch(error => {
+					console.log(error);
+				});
+			}
+            
+        </script>
+
+		<nav>
+			<ul id="nav-bar">
+				<li><a href="index.html">Home</a></li>
+				<li><a href="index.html?type=trade">Trade</a></li>
+				<li><a href="index.html?type=want">Want</a></li>
+				<li><a href="about.html">About</a></li>
+				<li><a href="profile.html?id=3">Contact</a></li>
+			</ul>
+		</nav>
+	</div>
+	<script>adminNavInject();</script>
+</header>
+
+
+
+
+<div class="centered-container" style="width: 50%; margin: 10em auto; display:none;" id="actionState">
+	<p id="stateMessage"></p>
+</div>
+
+<div class="centered-container" id="main-container" style="width:100%;">
+	<div class="col-container-new" style="width:100%; height:auto;">
+		<canvas id="bannerCanvas" width="20px" height="100px" style="width:100%; max-height: 100%; top: 0; left: 0; z-index: 1;"></canvas>
+		<img src="index_banner.jpg" alt="Shkalik: Premier Mini Vodka & Alcohol Bottle Collection" id="index-banner" style="max-width: 100%; max-height: 100%; position: absolute; left: 50%; transform: translateX(-50%); z-index: 2;">
+	</div>
+	<div class="col-container-new" style="width:80%;">
+		<div class="row-container-new">
+			<select class="sort-select" name="sort" id="sort" onchange="startCatalogFetch()">
+				<option value="new">Newest Entry</option>
+				<option value="old">Oldest Entry</option>
+				<option value="alphabet">Alphabetical</option>
+			</select>
+			<div class="tag-editor">
+				<input class="tag-input" id="searchbar" placeholder="search">
+			</div>
+			<button class="dark-button" onclick="startAdvSearch();" style="width: auto; border-radius: 0.5em; margin:0; margin-left: 0.625em; margin-right: 0.625em;" id="search-button" >Search</button>
+			<button class="dark-button" onclick="startNewItem();" style="width: auto; display:none; border-radius: 0.5em; margin:0; margin-left: 0.625em; margin-right: 0.625em;" id="new-item-button">+New Item</button>
+		</div>
+	</div>
+	<div class="col-container-new" style="width:100%;margin-top:3em;">
+		<div class="gallery" style="width:80%;" id="gallery-container">
+		</div>
+		<div class="row-container-new" id="traverse-items" style="margin-bottom: 2em;margin-top: 1em;">
+		</div>	  
+	</div>
+	
+</div>
+
+
+</body>
+
+<footer>
+
+
+	<script>
+		let catalogJSON = {};
+
+		let maxPerPage = 12;
+
+		function startAdvSearch(){
+			let searchValue = document.getElementById("searchbar").value.trim();
+			if(searchValue == ''){
+				window.location.href = 'search.html';
+			}
+			else{
+				window.location.href = 'search.html?search='+searchValue;
+			}
+		}
+
+		function startNewItem(){
+			startRequest("new_item", "POST", url = 'api/catalog-object/', token = getToken(), data = {'name':'new item'}, callBackFunction=moveToNewItem);
+		}
+
+		function moveToNewItem(res){
+			if(res['status'] == 201){
+				window.location.href = 'edit-item.html?id='+res['json']['id'];
+			}
+			else{
+				displayMessage("Unable to create new item");
+			}
+		}
+		
+		function startCatalogFetch(){
+			let sort_val = document.getElementById("sort").value;
+
+			const queryString = window.location.search;
+			const urlParams = new URLSearchParams(queryString);
+
+			let search_type = 'collection';
+
+			if(urlParams.has('type')){
+				search_type = urlParams.get('type');
+			}
+
+			startRequest("get_"+sort_val, "GET", url = 'api/catalog-object/?order_by='+sort_val+"&type="+search_type, token = getToken(), data = null, callBackFunction=gotFreshData);
+		}
+
+		
+
+		function displayMessage(msg){
+			showMain(false);
+			document.getElementById("actionState").style.display = "block";
+			document.getElementById("stateMessage").innerHTML = msg;
+		}
+
+		function showMain(show=true){
+			if(show){
+				document.getElementById('main-container').style.display = 'grid';
+			}
+			else{
+				document.getElementById('main-container').style.display = 'none';
+			}
+		}
+
+		function gotFreshData(res){
+			let sort_val = document.getElementById("sort").value;
+			if(res['id'] == "get_"+sort_val){
+				if(res['status'] == 200){
+					catalogJSON = res['json'];
+					populateItems(1);
+				}
+				else{
+					displayMessage("Unable to fetch items");
+				}
+			}
+		}
+
+		function itemClicked(item){
+			item = item.parentNode;
+			//console.log("A1");
+			if(quickIsAdmin()){
+				//console.log("B1: "+item.getAttribute('published'));
+				if(item.getAttribute('published') == 'false'){
+					window.location.href = 'edit-item.html?id='+item.getAttribute('item_id');
+				}
+				else{
+					window.location.href = 'item.html?id='+item.getAttribute('item_id');
+				}
+			}
+			else{
+				window.location.href = 'item.html?id='+item.getAttribute('item_id');
+			}
+		}
+
+		let itemImageURLS = [];
+
+		function populateItems(pN){
+			let pageIndex = pN - 1;
+
+			startItem = pageIndex * maxPerPage; //0 inclusive
+			exclusiveEndItem = startItem + maxPerPage; //20 exclusive
+
+
+			let galleryContainer = document.getElementById("gallery-container");
+
+			galleryContainer.innerHTML = "";
+
+			itemImageURLS = [];
+
+			for(let i=startItem; i < exclusiveEndItem; i++){
+				if(i>= 0 && i < catalogJSON.length){
+
+					if(catalogJSON[i]['image'] != null){
+						itemImageURLS.push([i, catalogJSON[i]['image']['lq_image'], catalogJSON[i]['image']['base_image'], 0]);
+						galleryContainer.innerHTML += `
+								<div style="padding-bottom: 4em;" id="item_${catalogJSON[i]['id']}">
+									<img src="missing_image.jpg" title="view ${catalogJSON[i]['name']}" id='item_pic_${catalogJSON[i]['id']}' onload='getItemImage(${i}, this);' onclick='itemClicked(this);'>
+									<br>
+									<label onclick='itemClicked(this);'>${catalogJSON[i]['name']}</label>
+								</div>
+								`;
+					}
+					else{
+						galleryContainer.innerHTML += `
+								<div style="padding-bottom: 4em;" id="item_${catalogJSON[i]['id']}">
+									<img src="missing_image.jpg" title="view ${catalogJSON[i]['name']}" id='item_pic_${catalogJSON[i]['id']}' onclick='itemClicked(this);'>
+									<br>
+									<label onclick='itemClicked(this);'>${catalogJSON[i]['name']}</label>
+								</div>
+								`;
+					}
+
+					let dImage = document.getElementById(`item_pic_${catalogJSON[i]['id']}`);
+
+					if(catalogJSON[i]['published'] == false){
+						dImage.title = "edit";
+						dImage.style.backgroundColor = "rgb(128, 60, 90)";
+					}
+					else if(quickIsAdmin()){
+						document.getElementById(`item_${catalogJSON[i]['id']}`).innerHTML = `<button class="edit-button-left" onclick="editItem('${catalogJSON[i]['id']}');" title="edit">edit</button>`+document.getElementById(`item_${catalogJSON[i]['id']}`).innerHTML;
+					}
+
+					document.getElementById(`item_${catalogJSON[i]['id']}`).setAttribute("published", catalogJSON[i]['published']);
+					document.getElementById(`item_${catalogJSON[i]['id']}`).setAttribute("item_id", catalogJSON[i]['id']);
+
+
+				}
+			}
+
+
+			let maxPages = Math.ceil(catalogJSON.length / maxPerPage);
+			let nFactor = 2;
+
+			if(maxPages > 1){
+
+				let spans = '';
+				if(maxPages <= ((nFactor*2)+1)){
+					for(let i=1; i <= maxPages; i++){
+						if(i == (pageIndex+1)){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none; '>${i}</span>`;
+						}
+						else{
+							spans += `<span class='stylized-pagination' onclick='populateItems(${i});'>${i}</span>`;
+						}
+					}
+				}
+				else{
+					if((pageIndex-nFactor) > 0){
+						spans += `<span class='stylized-pagination' onclick='populateItems(1);'>1</span>`;
+						if((pageIndex-nFactor) > 1){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none; '>...</span>`;
+						}
+					}
+
+
+					for(let i=pageIndex-nFactor; i <= pageIndex+nFactor; i++){
+						if(i >= 0 && i < maxPages){
+							if(i == pageIndex){
+								spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none;'>${i+1}</span>`;
+							}
+							else{
+								spans += `<span class='stylized-pagination' onclick='populateItems(${i+1});'>${i+1}</span>`;
+							}
+						}
+					}
+
+					if((pageIndex+nFactor) < (maxPages - 1)){
+						if((pageIndex+nFactor) < maxPages - 2){
+							spans += `<span class='stylized-pagination' style='cursor:default;text-decoration: none;' >...</span>`;
+						}
+						spans += `<span class='stylized-pagination' onclick='populateItems(${maxPages});'>${maxPages}</span>`;
+					}
+				}
+
+				document.getElementById("traverse-items").innerHTML = spans;
+				
+			}
+			else{
+				document.getElementById("traverse-items").innerHTML = '';
+			}
+		}
+
+		function editItem(itemId){
+			window.location.href = 'edit-item.html?id='+itemId;
+		}
+
+		function getItemImage(index, element){
+			for(let i=0; i < itemImageURLS.length; i++ ){
+				if(itemImageURLS[i][0] == index && itemImageURLS[i][3] != 1 ){
+					itemImageURLS[i][3] = 1;
+					getImageByURL(itemImageURLS[i][1], itemImageURLS[i][2], document.getElementById(element.id), false);
+					break;
+				}
+			}
+			
+		}
+
+		function OnResizeFunc(){
+			resizeBannerCanvas();
+		}
+
+		function resizeBannerCanvas(){
+			let h = document.getElementById("index-banner").getBoundingClientRect().height;
+			document.getElementById("bannerCanvas").style.maxHeight = h+"px";
+		}
+
+		window.addEventListener("DOMContentLoaded", function(){
+			isAuthed().then(isAuthenticated => {
+				let showButton = false;
+				if(isAuthenticated){
+					if(quickIsAdmin()){
+						showButton = true;
+					}
+				}
+
+				if(showButton){
+					document.getElementById("new-item-button").style.display = 'block';
+				}
+				else{
+					document.getElementById("new-item-button").style.display = 'none';
+				}
+
+				startCatalogFetch();
+
+			}).catch(error => {
+				console.log("Authentication check failed:"+error);
+
+				startCatalogFetch();
+			});
+
+			
+			
+
+		});
+
+		window.addEventListener("load", function(){
+
+			const canvas = document.getElementById("bannerCanvas");
+
+			let trueHeight = document.getElementById("index-banner").naturalHeight;
+			let trueWidth = document.getElementById("index-banner").naturalWidth;
+
+			canvas.setAttribute("height", trueHeight+"px");
+			canvas.setAttribute("width", trueWidth+"px");
+
+			//fill it
+			const ctx = canvas.getContext("2d");
+			ctx.fillStyle = "green";
+
+			//ctx.fillRect(0, 0, 20, trueHeight);
+			ctx.drawImage(document.getElementById('index-banner'), 0, 0);
+
+			var columnDataL = ctx.getImageData(0, 0, 1, trueHeight);
+			var columnDataR = ctx.getImageData(trueWidth-1, 0, 1, trueHeight);
+
+			let widthPx = 20;
+			canvas.setAttribute("width", widthPx+"px");
+			for(let x = 0; x < widthPx; x++){
+				if(x < widthPx/2){
+					ctx.putImageData(columnDataL, x, 0);
+				}
+				else{
+					ctx.putImageData(columnDataR, x, 0);
+				}
+			}
+
+
+			resizeBannerCanvas();
+
+			window.onresize = OnResizeFunc;
+		});		  
+		  
+	</script>
+</footer>
+
+</html>
